@@ -224,7 +224,21 @@
 
   <div id="toast" class="toast hidden"></div>
 
-  <script type="module">
+  <!-- Load Firebase config from external file to avoid exposing key in index.html.
+Create a file named config.js in the same folder with:
+  window.__FIREBASE_CONFIG__ = {
+    apiKey: "YOUR_KEY",
+    authDomain: "bestgolfclub-3425f.firebaseapp.com",
+    projectId: "bestgolfclub-3425f",
+    storageBucket: "bestgolfclub-3425f.appspot.com",
+    messagingSenderId: "219240386641",
+    appId: "1:219240386641:web:b38902c3a471a3b8442870",
+    measurementId: "G-G97G6PEJ2Q"
+  };
+Note: Firebase web keys are public; restrict by HTTP referrers + API scopes in Google Cloud.
+-->
+<script src="config.js"></script>
+<script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
     import {
       getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult,
@@ -235,15 +249,12 @@
       query, orderBy, where, doc, getDoc, getDocs, limit, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
     // --- Config (jouw Firebase project) ---
-    const firebaseConfig = {
-      apiKey: "AIzaSyD4gB9C0ZVcSLYQ4D4kM2-RtCb3ZJp3iag",
-      authDomain: "bestgolfclub-3425f.firebaseapp.com",
-      projectId: "bestgolfclub-3425f",
-      storageBucket: "bestgolfclub-3425f.appspot.com",
-      messagingSenderId: "219240386641",
-      appId: "1:219240386641:web:b38902c3a471a3b8442870",
-      measurementId: "G-G97G6PEJ2Q"
-    };
+    // Read config from external config.js
+    const firebaseConfig = (window.__FIREBASE_CONFIG__ || null);
+    if (!firebaseConfig || !firebaseConfig.apiKey){
+      alert('Firebase config ontbreekt. Voeg config.js toe met window.__FIREBASE_CONFIG__.');
+      throw new Error('Missing window.__FIREBASE_CONFIG__');
+    }
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
