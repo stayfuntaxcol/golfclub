@@ -57,6 +57,7 @@
   </style>
 </head>
 <body>
+  <!-- AUTH OVERLAY -->
   <div id="authOverlay">
     <div id="authCard" class="card">
       <h2 style="margin:0 0 6px">Inloggen vereist</h2>
@@ -75,6 +76,7 @@
     </div>
   </div>
 
+  <!-- HEADER / NAV -->
   <header>
     <div class="wrap row">
       <h1>🏌️‍♂️ Golfscore</h1>
@@ -92,6 +94,7 @@
     </div>
   </header>
 
+  <!-- MAIN -->
   <main>
     <section id="dashboard" class="section active">
       <div class="grid cards">
@@ -224,21 +227,10 @@
 
   <div id="toast" class="toast hidden"></div>
 
-  <!-- Load Firebase config from external file to avoid exposing key in index.html.
-Create a file named config.js in the same folder with:
-  window.__FIREBASE_CONFIG__ = {
-    apiKey: "YOUR_KEY",
-    authDomain: "bestgolfclub-3425f.firebaseapp.com",
-    projectId: "bestgolfclub-3425f",
-    storageBucket: "bestgolfclub-3425f.appspot.com",
-    messagingSenderId: "219240386641",
-    appId: "1:219240386641:web:b38902c3a471a3b8442870",
-    measurementId: "G-G97G6PEJ2Q"
-  };
-Note: Firebase web keys are public; restrict by HTTP referrers + API scopes in Google Cloud.
--->
-<script src="config.js"></script>
-<script type="module">
+  <!-- IMPORTANT: load config BEFORE the module script -->
+  <script src="config.js"></script>
+
+  <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
     import {
       getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult,
@@ -248,19 +240,19 @@ Note: Firebase web keys are public; restrict by HTTP referrers + API scopes in G
     import { getFirestore, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp,
       query, orderBy, where, doc, getDoc, getDocs, limit, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
-    // --- Config (jouw Firebase project) ---
-    // Read config from external config.js
+    // --- Config ---
     const firebaseConfig = (window.__FIREBASE_CONFIG__ || null);
     if (!firebaseConfig || !firebaseConfig.apiKey){
       alert('Firebase config ontbreekt. Voeg config.js toe met window.__FIREBASE_CONFIG__.');
       throw new Error('Missing window.__FIREBASE_CONFIG__');
     }
 
+    // Init
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Firestore offline persistence (queued writes & cached reads)
+    // Firestore offline persistence
     enableIndexedDbPersistence(db).catch(async (e)=>{
       if (e && e.code === 'failed-precondition'){
         const { enableMultiTabIndexedDbPersistence } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
@@ -271,7 +263,7 @@ Note: Firebase web keys are public; restrict by HTTP referrers + API scopes in G
       }
     });
 
-    // --- Helpers ---
+    // Helpers
     const $ = (s)=>document.querySelector(s);
     const $$ = (s)=>Array.from(document.querySelectorAll(s));
     const fmtDate = (d)=> new Date(d).toLocaleDateString();
@@ -360,7 +352,7 @@ Note: Firebase web keys are public; restrict by HTTP referrers + API scopes in G
       });
     }
 
-    // Dashboard KPIs (laatste 5 rondes – over alle spelers of alleen current?)
+    // Dashboard KPIs (laatste 5 rondes – simpel over alle spelers)
     function renderKPIs(){
       const last5 = allRounds.slice(0,5);
       if(!last5.length){ $('#kpiAvg').textContent='—'; $('#kpiBest').textContent='—'; $('#kpiPutts').textContent='—'; return; }
@@ -437,7 +429,6 @@ Note: Firebase web keys are public; restrict by HTTP referrers + API scopes in G
       $('#roundForm').classList.remove('hidden');
       $('#rfTitle').textContent = edit? 'Ronde bewerken' : 'Nieuwe ronde';
       if(!edit){
-        // defaults
         $('#rf_date').valueAsDate = new Date();
         $('#rf_course').value=''; $('#rf_tee').value=''; $('#rf_holesPlayed').value='18'; $('#rf_notes').value='';
         buildHolesGrid();
@@ -521,7 +512,7 @@ Note: Firebase web keys are public; restrict by HTTP referrers + API scopes in G
       finally{ const btn=$('#rfSave'); btn.disabled=false; btn.textContent='Opslaan'; }
     }
 
-    // Edit/Delete handlers (placeholders – bewerken in fase 1.1)
+    // Edit/Delete handlers (delete werkt; edit in volgende iteratie)
     document.querySelector('#roundsBody').addEventListener('click', async (ev)=>{
       const t=ev.target; const id=t.getAttribute('data-edit')||t.getAttribute('data-del'); if(!id) return;
       if(t.hasAttribute('data-del')){
