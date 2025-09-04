@@ -1,1 +1,548 @@
-logo
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b1020" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <title>Golfscore – Dashboard</title>
+  <style>
+    :root{ --bg:#0b1020; --panel:#0f152b; --card:#111936; --ink:#dbe3ff; --muted:#92a0c6; --line:#1c2447; --brand:#6ea8fe; --accent:#22d3ee; --danger:#ef4444; --ok:#22c55e; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,sans-serif;background:linear-gradient(180deg,#0b1020,#0a0f1d);color:var(--ink)}
+    header{position:sticky;top:0;z-index:20;background:rgba(10,15,29,.8);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+    .wrap{max-width:1200px;margin:0 auto;padding:14px 16px}
+    h1{font-size:18px;margin:0;letter-spacing:.3px}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .right{margin-left:auto}
+    button,select,input,textarea{font:inherit;border-radius:10px;border:1px solid var(--line);background:#0b1230;color:var(--ink);padding:8px 10px}
+    button{cursor:pointer;background:linear-gradient(180deg,#1a2e6e,#16275b);border:1px solid #2a3e84}
+    button:hover{filter:brightness(1.08)}
+    button.secondary{background:#0b1230;border-color:var(--line)}
+    button.ghost{background:transparent;border-color:transparent}
+    button.danger{background:#361520;border-color:#6f2338}
+    main{max-width:1200px;margin:18px auto;padding:0 16px}
+    .grid{display:grid;gap:12px}
+    .cards{grid-template-columns:repeat(12,1fr)}
+    .card{background:linear-gradient(180deg,#0e1534,#0b1230);border:1px solid var(--line);border-radius:14px;padding:12px}
+    .card h3{margin:0 0 8px 0;font-size:14px;color:#c9d6ff}
+    .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);padding:4px 8px;border-radius:999px;font-size:12px;color:var(--muted)}
+    .pill.off{color:#ff9aa2;border-color:#6b2a2a;background:#28131d}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left}
+    th{font-size:12px;color:#a6b5e3}
+    .muted{color:var(--muted);font-size:12px}
+    .kpi{font-size:22px;font-weight:600}
+    .sub{font-size:12px;color:var(--muted)}
+    .tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin:16px 0}
+    .tab{padding:8px 12px;border:1px solid var(--line);border-bottom:none;border-radius:10px 10px 0 0;background:#0b1230;color:#a6b5e3;cursor:pointer}
+    .tab.active{background:linear-gradient(180deg,#121a3b,#0b1230);color:#e9eeff}
+    .section{display:none}
+    .section.active{display:block}
+    /* Auth overlay */
+    #authOverlay{position:fixed;inset:0;background:rgba(8,10,20,.92);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:50}
+    #authCard{max-width:520px;width:92%;text-align:center}
+    #authCard .card{padding:18px}
+    /* Form */
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .holes{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+    .holes .h{background:#0b1230;border:1px solid var(--line);border-radius:10px;padding:8px}
+    .holes .h label{font-size:11px;color:#9fb0e9}
+    .holes .h input[type=number], .holes .h select{width:100%;margin-top:4px}
+    .toast{position:fixed;right:12px;bottom:12px;background:#0b1230;border:1px solid var(--line);padding:10px 12px;border-radius:10px}
+    .ok{color:var(--ok)}.err{color:#ff6b6b}
+    .badge{font-size:11px;padding:2px 6px;border-radius:6px;border:1px solid var(--line);color:#cfe0ff}
+  </style>
+</head>
+<body>
+  <div id="authOverlay">
+    <div id="authCard" class="card">
+      <h2 style="margin:0 0 6px">Inloggen vereist</h2>
+      <p class="muted">Log in met e‑mail (link) of Google om scores te zien en toe te voegen.</p>
+      <div class="row" style="flex-direction:column;gap:10px;align-items:stretch;max-width:460px;margin:0 auto">
+        <div class="row" style="gap:8px">
+          <input id="emailInput" type="email" placeholder="jij@voorbeeld.nl" style="flex:1" />
+          <button id="btnEmailLink">Stuur login‑link</button>
+        </div>
+        <div class="row" style="justify-content:center">
+          <button id="btnGoogleLogin">Log in met Google</button>
+        </div>
+        <div class="muted" id="authMsg" style="min-height:18px"></div>
+        <div class="row" style="justify-content:center"><button id="btnResend" class="secondary hidden">Stuur nieuwe link</button></div>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap row">
+      <h1>🏌️‍♂️ Golfscore</h1>
+      <div class="right row">
+        <span id="userEmail" class="pill">Niet ingelogd</span>
+        <span id="netBadge" class="pill">Online</span>
+        <button id="btnLogout" class="secondary">Uitloggen</button>
+      </div>
+    </div>
+    <div class="wrap tabs">
+      <div class="tab active" data-tab="dashboard">Dashboard</div>
+      <div class="tab" data-tab="rounds">Rondes</div>
+      <div class="tab" data-tab="courses">Courses</div>
+      <div class="tab" data-tab="profile">Profiel</div>
+    </div>
+  </header>
+
+  <main>
+    <section id="dashboard" class="section active">
+      <div class="grid cards">
+        <div class="card" style="grid-column: span 3">
+          <h3>Gem. slagen (laatste 5)</h3>
+          <div class="kpi" id="kpiAvg">—</div>
+          <div class="sub" id="kpiAvgSub">—</div>
+        </div>
+        <div class="card" style="grid-column: span 3">
+          <h3>Beste ronde</h3>
+          <div class="kpi" id="kpiBest">—</div>
+          <div class="sub" id="kpiBestSub">—</div>
+        </div>
+        <div class="card" style="grid-column: span 3">
+          <h3>Putts / ronde</h3>
+          <div class="kpi" id="kpiPutts">—</div>
+          <div class="sub" id="kpiPuttsSub">—</div>
+        </div>
+        <div class="card" style="grid-column: span 3">
+          <h3>FIR / GIR</h3>
+          <div class="kpi" id="kpiFirGir">—</div>
+          <div class="sub">Fairway in Regulation / Green in Regulation</div>
+        </div>
+
+        <div class="card" style="grid-column: span 12">
+          <div class="row" style="justify-content:space-between">
+            <h3 style="margin:0">Leaderboard (open voor alle leden)</h3>
+            <div class="row">
+              <select id="lbPeriod">
+                <option value="30">Laatste 30 dagen</option>
+                <option value="90">Laatste 90 dagen</option>
+                <option value="365">Laatste jaar</option>
+                <option value="all">All‑time</option>
+              </select>
+              <button id="btnExport" class="secondary">Export CSV</button>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>Speler</th><th>Rondes</th><th>Gem.</th><th>Beste</th><th>Putts/r</th></tr></thead>
+            <tbody id="lbBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="rounds" class="section">
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
+          <h3 style="margin:0">Rondes</h3>
+          <div class="row"><button id="btnNewRound">+ Nieuwe ronde</button></div>
+        </div>
+        <table>
+          <thead><tr><th>Datum</th><th>Baan</th><th>Tees</th><th>Holes</th><th>Strokes</th><th>Putts</th><th>FIR% / GIR%</th><th>Speler</th><th></th></tr></thead>
+          <tbody id="roundsBody"></tbody>
+        </table>
+      </div>
+
+      <div id="roundForm" class="card hidden">
+        <h3 id="rfTitle">Nieuwe ronde</h3>
+        <div class="grid-3">
+          <div>
+            <label class="muted">Datum</label>
+            <input id="rf_date" type="date">
+          </div>
+          <div>
+            <label class="muted">Baan</label>
+            <input id="rf_course" placeholder="Baannaam">
+          </div>
+          <div>
+            <label class="muted">Tees</label>
+            <input id="rf_tee" placeholder="Bijv. Wit/Geel/Rood">
+          </div>
+        </div>
+        <div class="grid-3" style="margin-top:8px">
+          <div>
+            <label class="muted">Holes</label>
+            <select id="rf_holesPlayed">
+              <option value="18">18</option>
+              <option value="9">9</option>
+            </select>
+          </div>
+          <div>
+            <label class="muted">Opmerking</label>
+            <input id="rf_notes" placeholder="Optioneel">
+          </div>
+        </div>
+
+        <div class="holes" style="margin-top:10px" id="holesGrid"></div>
+        <div class="row" style="gap:8px;margin-top:10px">
+          <div class="pill">Totaal slagen: <b id="rf_totalStrokes" style="margin-left:6px">0</b></div>
+          <div class="pill">Putts: <b id="rf_totalPutts" style="margin-left:6px">0</b></div>
+          <div class="pill">FIR%: <b id="rf_firPct" style="margin-left:6px">0%</b></div>
+          <div class="pill">GIR%: <b id="rf_girPct" style="margin-left:6px">0%</b></div>
+        </div>
+        <div id="rfMsg" class="muted" style="min-height:18px;margin-top:6px"></div>
+        <div class="row" style="justify-content:flex-end;gap:8px;margin-top:10px">
+          <button id="rfCancel" class="secondary">Annuleren</button>
+          <button id="rfSave">Opslaan</button>
+        </div>
+        <input type="hidden" id="rf_id" />
+      </div>
+    </section>
+
+    <section id="courses" class="section">
+      <div class="card">
+        <h3>Courses (simpel)</h3>
+        <p class="muted">Voor nu vrije invoer bij rondes. In fase 2 voegen we volledig course/tee beheer toe.</p>
+      </div>
+    </section>
+
+    <section id="profile" class="section">
+      <div class="card">
+        <h3>Profiel</h3>
+        <div class="grid-2">
+          <div>
+            <label class="muted">Weergavenaam</label>
+            <input id="pf_name" placeholder="Naam">
+          </div>
+          <div>
+            <label class="muted">Handicap index (optioneel)</label>
+            <input id="pf_hcp" type="number" step="0.1" placeholder="Bijv. 14.3">
+          </div>
+        </div>
+        <div class="row" style="justify-content:flex-end;margin-top:10px;gap:8px">
+          <button id="pfSave" class="secondary">Opslaan</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import {
+      getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult,
+      signOut, onAuthStateChanged,
+      sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink
+    } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp,
+      query, orderBy, where, doc, getDoc, getDocs, limit, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+    // --- Config (jouw Firebase project) ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyD4gB9C0ZVcSLYQ4D4kM2-RtCb3ZJp3iag",
+      authDomain: "bestgolfclub-3425f.firebaseapp.com",
+      projectId: "bestgolfclub-3425f",
+      storageBucket: "bestgolfclub-3425f.appspot.com",
+      messagingSenderId: "219240386641",
+      appId: "1:219240386641:web:b38902c3a471a3b8442870",
+      measurementId: "G-G97G6PEJ2Q"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Firestore offline persistence (queued writes & cached reads)
+    enableIndexedDbPersistence(db).catch(async (e)=>{
+      if (e && e.code === 'failed-precondition'){
+        const { enableMultiTabIndexedDbPersistence } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+        try { await enableMultiTabIndexedDbPersistence(db); }
+        catch(err){ console.warn('IndexedDB persistence uitgeschakeld:', err?.code || err); }
+      } else {
+        console.warn('IndexedDB persistence niet beschikbaar:', e?.code || e);
+      }
+    });
+
+    // --- Helpers ---
+    const $ = (s)=>document.querySelector(s);
+    const $$ = (s)=>Array.from(document.querySelectorAll(s));
+    const fmtDate = (d)=> new Date(d).toLocaleDateString();
+    const toast = (msg, ok=true)=>{ const t=$('#toast'); t.textContent=msg; t.classList.remove('hidden'); t.classList.toggle('err',!ok); setTimeout(()=>t.classList.add('hidden'),3000); };
+    const netBadge = $('#netBadge');
+    function updateNet(){ const on = navigator.onLine; netBadge.textContent = on? 'Online':'Offline'; netBadge.classList.toggle('off', !on); }
+    window.addEventListener('online', updateNet); window.addEventListener('offline', updateNet); updateNet();
+
+    // Tabs
+    $$('.tab').forEach(tab=>tab.addEventListener('click',()=>{
+      $$('.tab').forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      $$('.section').forEach(s=>s.classList.remove('active'));
+      $('#'+tab.dataset.tab).classList.add('active');
+    }));
+
+    // AUTH overlay
+    const emailInput = $('#emailInput');
+    const authMsg = $('#authMsg');
+    const btnResend = $('#btnResend');
+    const provider = new GoogleAuthProvider();
+
+    getRedirectResult(auth).catch(e=>{ authMsg.textContent=e.message; console.error(e) });
+
+    $('#btnGoogleLogin').addEventListener('click', async ()=>{
+      try{ await signInWithRedirect(auth, provider); }catch(e){ authMsg.textContent=e.message; }
+    });
+
+    $('#btnEmailLink').addEventListener('click', async ()=>{
+      const email = (emailInput?.value||'').trim();
+      if(!email){ authMsg.textContent='Vul een geldig e‑mailadres in.'; return; }
+      await sendMagicLink(email, $('#btnEmailLink'));
+    });
+
+    btnResend.addEventListener('click', async ()=>{
+      let email = localStorage.getItem('emailForSignIn') || (emailInput?.value||'').trim();
+      if(!email) email = prompt('E‑mailadres?');
+      if(!email) return;
+      await sendMagicLink(email, btnResend);
+    });
+
+    async function sendMagicLink(email, button){
+      const backUrl = new URL(window.location.href); backUrl.search=''; backUrl.hash='';
+      const actionCodeSettings = { url: backUrl.toString(), handleCodeInApp: true };
+      const old = button.textContent; button.disabled=true; button.textContent='Bezig…';
+      try{ await sendSignInLinkToEmail(auth, email, actionCodeSettings); localStorage.setItem('emailForSignIn', email); authMsg.textContent=`Link verstuurd naar ${email}. Check je spam.`; btnResend.classList.add('hidden'); }
+      catch(e){ authMsg.textContent=e.message; }
+      finally{ button.disabled=false; button.textContent=old; }
+    }
+
+    (async function handleEmailLink(){
+      if (isSignInWithEmailLink(auth, window.location.href)){
+        let email = localStorage.getItem('emailForSignIn');
+        if (!email) email = prompt('E‑mail voor bevestiging:');
+        try{ await signInWithEmailLink(auth, email, window.location.href); localStorage.removeItem('emailForSignIn'); }
+        catch(e){ authMsg.textContent = e.code==='auth/invalid-action-code' ? 'Link ongeldig/verlopen. Vraag een nieuwe aan.' : e.message; btnResend.classList.remove('hidden'); }
+      }
+    })();
+
+    // STATE
+    let currentUser = null; let unsubRounds = null; let allRounds = [];
+
+    onAuthStateChanged(auth, async (user)=>{
+      currentUser = user;
+      if(!user){ $('#userEmail').textContent='Niet ingelogd'; $('#authOverlay').style.display='flex'; stopRounds(); return; }
+      $('#userEmail').textContent = user.email||user.uid; $('#authOverlay').style.display='none';
+      startRoundsStream();
+    });
+
+    function stopRounds(){ if (unsubRounds){ unsubRounds(); unsubRounds=null; } allRounds=[]; renderLeaderboard(); renderRounds(); }
+
+    // Rounds live query (open leaderboard: lees alle rondes)
+    function startRoundsStream(){
+      stopRounds();
+      const col = collection(db,'rounds');
+      const q1 = query(col, orderBy('date','desc'), limit(500));
+      unsubRounds = onSnapshot(q1, (snap)=>{
+        allRounds = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+        renderLeaderboard();
+        renderRounds();
+        renderKPIs();
+      }, (err)=>{
+        console.warn('Primary query failed', err);
+        const q2 = query(col, limit(500));
+        unsubRounds = onSnapshot(q2, (snap)=>{ allRounds = snap.docs.map(d=>({id:d.id,...d.data()})); renderLeaderboard(); renderRounds(); renderKPIs(); });
+      });
+    }
+
+    // Dashboard KPIs (laatste 5 rondes – over alle spelers of alleen current?)
+    function renderKPIs(){
+      const last5 = allRounds.slice(0,5);
+      if(!last5.length){ $('#kpiAvg').textContent='—'; $('#kpiBest').textContent='—'; $('#kpiPutts').textContent='—'; return; }
+      const avg = (last5.reduce((s,r)=>s+(r?.totals?.strokes||0),0)/last5.length).toFixed(1);
+      const best = Math.min(...last5.map(r=>r?.totals?.strokes||999));
+      const putts = (last5.reduce((s,r)=>s+(r?.totals?.putts||0),0)/last5.length).toFixed(1);
+      const fir = avgPct(last5.map(r=>r?.totals?.firPct));
+      const gir = avgPct(last5.map(r=>r?.totals?.girPct));
+      $('#kpiAvg').textContent = avg;
+      $('#kpiBest').textContent = isFinite(best)? best : '—';
+      $('#kpiPutts').textContent = putts;
+      $('#kpiFirGir').textContent = `${fir}% / ${gir}%`;
+      $('#kpiAvgSub').textContent = `Over ${last5.length} rondes`;
+      $('#kpiBestSub').textContent = last5[0]?.course||'';
+      $('#kpiPuttsSub').textContent = 'Gemiddelde laatste 5';
+    }
+
+    function avgPct(arr){ const xs=arr.filter(x=>typeof x==='number'); return xs.length? Math.round(xs.reduce((a,b)=>a+b,0)/xs.length) : 0; }
+
+    // Leaderboard (open: alle leden)
+    $('#lbPeriod').addEventListener('change', renderLeaderboard);
+    function renderLeaderboard(){
+      const period = $('#lbPeriod').value;
+      const now = Date.now();
+      const from = period==='all' ? 0 : (now - Number(period)*24*3600*1000);
+      const rows = allRounds.filter(r=>{
+        const t = (r.date && typeof r.date.toMillis==='function') ? r.date.toMillis() : (r.date? new Date(r.date).getTime() : 0);
+        return t>=from;
+      });
+      // group by userId
+      const byUser = new Map();
+      for(const r of rows){
+        const u = r.userId||'onbekend';
+        if(!byUser.has(u)) byUser.set(u,[]);
+        byUser.get(u).push(r);
+      }
+      const agg = [];
+      byUser.forEach((list,uid)=>{
+        const n=list.length;
+        const avg=(list.reduce((s,x)=>s+(x?.totals?.strokes||0),0)/n)||0;
+        const best = Math.min(...list.map(x=>x?.totals?.strokes||9999));
+        const putts=(list.reduce((s,x)=>s+(x?.totals?.putts||0),0)/n)||0;
+        agg.push({ uid, n, avg: Number(avg.toFixed(2)), best, putts: Number(putts.toFixed(1)) });
+      });
+      agg.sort((a,b)=> a.avg-b.avg);
+      const tbody = $('#lbBody'); tbody.innerHTML='';
+      for(const a of agg){
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td><span class="badge">${a.uid}</span></td><td>${a.n}</td><td>${a.avg}</td><td>${a.best}</td><td>${a.putts}</td>`;
+        tbody.appendChild(tr);
+      }
+    }
+
+    // Rounds list
+    function renderRounds(){
+      const tb = $('#roundsBody'); tb.innerHTML='';
+      for(const r of allRounds){
+        const dateStr = r.date && r.date.toDate ? r.date.toDate().toLocaleDateString() : (r.date? fmtDate(r.date):'—');
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${dateStr}</td><td>${esc(r.course)}</td><td>${esc(r.tee||'')}</td><td>${r.holesPlayed||18}</td><td>${r?.totals?.strokes||''}</td><td>${r?.totals?.putts||''}</td><td>${fmtPct(r?.totals?.firPct)} / ${fmtPct(r?.totals?.girPct)}</td><td><span class="badge">${r.userId||''}</span></td><td><button class="secondary" data-edit="${r.id}">Bewerk</button> <button class="danger" data-del="${r.id}">Verwijder</button></td>`;
+        tb.appendChild(tr);
+      }
+    }
+    function esc(s){ return (s||'').toString().replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+    function fmtPct(v){ return (typeof v==='number'? Math.round(v) : 0)+"%"; }
+
+    // New round form
+    $('#btnNewRound').addEventListener('click', ()=>{ showRoundForm(); });
+    $('#rfCancel').addEventListener('click', ()=>{ hideRoundForm(); });
+    $('#rf_holesPlayed').addEventListener('change', buildHolesGrid);
+    $('#rfSave').addEventListener('click', saveRound);
+
+    function showRoundForm(edit=false){
+      $('#roundForm').classList.remove('hidden');
+      $('#rfTitle').textContent = edit? 'Ronde bewerken' : 'Nieuwe ronde';
+      if(!edit){
+        // defaults
+        $('#rf_date').valueAsDate = new Date();
+        $('#rf_course').value=''; $('#rf_tee').value=''; $('#rf_holesPlayed').value='18'; $('#rf_notes').value='';
+        buildHolesGrid();
+      }
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+    function hideRoundForm(){ $('#roundForm').classList.add('hidden'); $('#rf_id').value=''; }
+
+    function buildHolesGrid(){
+      const n = Number($('#rf_holesPlayed').value)||18;
+      const box = $('#holesGrid'); box.innerHTML='';
+      for(let i=1;i<=n;i++){
+        const div=document.createElement('div'); div.className='h';
+        div.innerHTML=`<label>Hole ${i}</label>
+          <div class="grid-4">
+            <input type="number" min="3" max="6" step="1" placeholder="Par" data-par data-i="${i}">
+            <input type="number" min="1" max="15" step="1" placeholder="Slagen" data-strokes data-i="${i}">
+            <input type="number" min="0" max="5" step="1" placeholder="Putts" data-putts data-i="${i}">
+            <select data-fir data-i="${i}"><option value="">FIR?</option><option value="1">Ja</option><option value="0">Nee</option></select>
+          </div>
+          <div class="grid-4" style="margin-top:6px">
+            <select data-gir data-i="${i}"><option value="">GIR?</option><option value="1">Ja</option><option value="0">Nee</option></select>
+            <input type="text" placeholder="Notitie (optioneel)" data-note data-i="${i}" style="grid-column: span 3">
+          </div>`;
+        box.appendChild(div);
+      }
+    }
+
+    function collectHoleData(){
+      const n = Number($('#rf_holesPlayed').value)||18;
+      const holes=[]; let sumStrokes=0, sumPutts=0, firC=0, firN=0, girC=0, girN=0;
+      for(let i=1;i<=n;i++){
+        const par = numSel(`[data-par][data-i="${i}"]`);
+        const strokes = numSel(`[data-strokes][data-i="${i}"]`);
+        const putts = numSel(`[data-putts][data-i="${i}"]`);
+        const fir = sel(`[data-fir][data-i="${i}"]`);
+        const gir = sel(`[data-gir][data-i="${i}"]`);
+        const note = stringSel(`[data-note][data-i="${i}"]`);
+        holes.push({ n:i, par, strokes, putts, fir: toBool(fir), gir: toBool(gir), note: note||null });
+        if(typeof strokes==='number') sumStrokes+=strokes;
+        if(typeof putts==='number') sumPutts+=putts;
+        if(fir!=='' ){ firN++; if(fir==='1') firC++; }
+        if(gir!=='' ){ girN++; if(gir==='1') girC++; }
+      }
+      const totals={ strokes:sumStrokes, putts:sumPutts, firPct: firN? (firC/firN*100):null, girPct: girN? (girC/girN*100):null };
+      $('#rf_totalStrokes').textContent=String(sumStrokes||0);
+      $('#rf_totalPutts').textContent=String(sumPutts||0);
+      $('#rf_firPct').textContent=(totals.firPct? Math.round(totals.firPct):0)+"%";
+      $('#rf_girPct').textContent=(totals.girPct? Math.round(totals.girPct):0)+"%";
+      return { holes, totals };
+    }
+
+    function numSel(q){ const v = sel(q); if(v==='') return null; const n=Number(v); return isFinite(n)? n:null; }
+    function stringSel(q){ const el = document.querySelector(q); return el? el.value.trim():''; }
+    function sel(q){ const el=document.querySelector(q); return el? el.value: ''; }
+    function toBool(v){ return v===''? null : v==='1'; }
+
+    async function saveRound(){
+      if(!currentUser){ toast('Niet ingelogd', false); return; }
+      const n = Number($('#rf_holesPlayed').value)||18;
+      const date = $('#rf_date').value ? new Date($('#rf_date').value) : new Date();
+      const course = $('#rf_course').value.trim();
+      const tee = $('#rf_tee').value.trim();
+      const notes = $('#rf_notes').value.trim()||null;
+      const { holes, totals } = collectHoleData();
+      const payload = {
+        userId: currentUser.uid,
+        date,
+        course, tee,
+        holesPlayed: n,
+        holes,
+        totals,
+        notes,
+        createdAt: serverTimestamp()
+      };
+      try{
+        const btn=$('#rfSave'); const old=btn.textContent; btn.disabled=true; btn.textContent='Opslaan…';
+        await addDoc(collection(db,'rounds'), payload);
+        toast(navigator.onLine? 'Ronde opgeslagen' : 'Ronde opgeslagen (synct zodra je online bent)'); hideRoundForm();
+      }catch(e){ console.error(e); toast(e.message||'Opslaan mislukt', false); }
+      finally{ const btn=$('#rfSave'); btn.disabled=false; btn.textContent='Opslaan'; }
+    }
+
+    // Edit/Delete handlers (placeholders – bewerken in fase 1.1)
+    document.querySelector('#roundsBody').addEventListener('click', async (ev)=>{
+      const t=ev.target; const id=t.getAttribute('data-edit')||t.getAttribute('data-del'); if(!id) return;
+      if(t.hasAttribute('data-del')){
+        if(!confirm('Ronde verwijderen?')) return;
+        try{ await deleteDoc(doc(db,'rounds', id)); toast('Verwijderd'); }catch(e){ toast('Verwijderen mislukt', false); }
+      }
+    });
+
+    // Export CSV (leaderboard view)
+    $('#btnExport').addEventListener('click', ()=>{
+      const rows = [['speler','rondes','gem','beste','putts/r']];
+      $$('#lbBody tr').forEach(tr=>{
+        const tds=tr.querySelectorAll('td');
+        rows.push([tds[0].innerText, tds[1].innerText, tds[2].innerText, tds[3].innerText, tds[4].innerText]);
+      });
+      const csv = rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='leaderboard.csv'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    // Logout
+    $('#btnLogout').addEventListener('click', async ()=>{ await signOut(auth); location.reload(); });
+
+    // Service Worker registreren (PWA + offline app-shell)
+    if ('serviceWorker' in navigator){
+      const base = location.pathname.replace(/[^/]+$/, '');
+      const swUrl = base + 'sw.js';
+      navigator.serviceWorker.register(swUrl, { scope: base })
+        .then(()=>console.log('SW geregistreerd:', swUrl))
+        .catch((e)=>console.warn('SW registratie faalde', e));
+    }
+  </script>
+</body>
+</html>
