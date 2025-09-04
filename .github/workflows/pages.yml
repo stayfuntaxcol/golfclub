@@ -1,0 +1,54 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Bouwmap aanmaken en alles kopiëren
+      - name: Prepare dist
+        run: |
+          mkdir -p dist
+          shopt -s dotglob
+          cp -r * dist/ || true
+
+      # config.js genereren vanuit geheim
+      - name: Create config.js
+        run: |
+          echo "window.__FIREBASE_CONFIG__ = ${{ secrets.FIREBASE_CONFIG_JSON }};" > dist/config.js
+
+      # (Optioneel) bump cache versie in sw.js automatisch
+      # - name: Bump SW version (optional)
+      #   run: |
+      #     sed -i 's/VERSION = .*/VERSION = '"'"'v'${{ github.run_number }}'"'"';/' dist/sw.js || true
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
